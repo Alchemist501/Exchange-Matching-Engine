@@ -4,6 +4,13 @@ A high-performance electronic exchange simulation platform written in C++20, imp
 
 Built with a focus on low-latency systems design and modern exchange infrastructure.
 
+[![C++20](https://img.shields.io/badge/Language-C%2B%2B20-blue.svg)](https://en.cppreference.com/w/cpp/compiler_support/20)
+[![CMake](https://img.shields.io/badge/Build-CMake-green.svg)](https://cmake.org/)
+[![GoogleTest](https://img.shields.io/badge/Testing-GoogleTest-blue.svg)](https://github.com/google/googletest)
+[![REST API](https://img.shields.io/badge/REST--API-Crow-orange.svg)](https://github.com/Crowcpp/Crow)
+[![WebSocket](https://img.shields.io/badge/WebSocket-Feed-yellow.svg)](https://github.com/Crowcpp/Crow)
+[![License](https://img.shields.io/badge/License-MIT-purple.svg)](LICENSE)
+
 ```
 +------------------------------------------------------+
 |  ORDER BOOK          LIVE TRADES       MARKET STATS  |
@@ -18,6 +25,9 @@ Built with a focus on low-latency systems design and modern exchange infrastruct
 +------------------------------------------------------+
 ```
 
+### 🖥️ Exchange Dashboard Mockup
+![Exchange Dashboard](assets/dashboard.png)
+
 ---
 
 ## Overview
@@ -29,6 +39,14 @@ Incoming client orders are validated by a pre-trade risk engine before being pro
 Executed trades update trader portfolios, market statistics, and are broadcast through REST and WebSocket interfaces.
 
 The system was designed with low latency and efficient memory management as primary goals.
+
+---
+
+## Motivation
+
+Electronic exchanges process millions of orders every second while maintaining deterministic price-time priority. 
+
+This project explores the internal architecture behind modern matching engines, focusing on low-latency execution, efficient memory layouts, and exchange infrastructure design.
 
 ---
 
@@ -137,6 +155,16 @@ Cross? ──► No ──► Remaining Quantity ──► Resting Liquidity
 * **Partial Fills**: Incoming orders can match against multiple resting orders. Unfilled remainders of limit orders are written to the book.
 * **Resting Liquidity**: The unmatched volume left in the book becomes passive liquidity available to subsequent crossing orders.
 
+### Algorithmic Complexity
+
+| Operation | Complexity | Rationale |
+| :--- | :--- | :--- |
+| **Insert** | $O(\log N)$ | Insertion of a new price level inside the binary search tree. |
+| **Match** | $O(\log N)$ | Accessing the best price level ($O(\log N)$) followed by $O(1)$ FIFO queue operations. |
+| **Cancel** | $O(1)$ | Direct node removal from the queue using cached list iterators. |
+| **Modify** | $O(1)$ / $O(\log N)$ | $O(1)$ for quantity reductions (preserving priority). $O(\log N)$ if price changes (losing priority). |
+| **Lookup** | $O(1)$ | Direct lookup via hash map index. |
+
 ---
 
 ## Internal Data Structures
@@ -150,6 +178,25 @@ To avoid slow $O(N)$ searches, memory is structured using specific STL container
 | `std::map` | Price Levels | Red-Black Tree that automatically keeps price levels sorted ($O(\log N)$ inserts). Asks are sorted ascending, and Bids are sorted descending. |
 | `std::list::iterator` | O(1) Cancel | Cached inside the lookup map. By referencing the iterator directly, we can erase a cancelled or modified order node from the list in $O(1)$ time without searching the list. |
 | `std::vector` | Statistics | Stores trade execution logs contiguously in memory, minimizing CPU cache misses during sequential loops. |
+
+---
+
+## Design Decisions
+
+### Why `std::list` instead of `std::vector` for price queues?
+A `std::vector` stores elements contiguously. If an order is cancelled or modified from the middle of the queue, all subsequent elements must be shifted over, resulting in $O(N)$ overhead. A doubly-linked `std::list` allows node deletion in $O(1)$ time, which is essential for low-latency cancellations.
+
+### Why `std::map` instead of `std::unordered_map` for price levels?
+An exchange requires price levels to be strictly sorted (highest Bid at the top, lowest Ask at the top) to quickly find matches. `std::unordered_map` is unsorted, while `std::map` keeps keys sorted inside a Red-Black Tree, enabling $O(1)$ access to the best price levels and $O(\log N)$ insertion.
+
+### Why cache iterators?
+Searching a `std::list` is an $O(N)$ scan. By caching the `std::list::iterator` inside the `std::unordered_map` lookup table during order insertion, the engine can directly jump to the list node and erase it in $O(1)$ time without traversing the queue.
+
+### Why single-threaded matching?
+Executing order books on multiple threads introduces massive lock contention and cache-bouncing as threads fight for the same memory addresses. Pinned single-threaded matching ensures deterministic execution order and preserves L1/L2 cache locality, which is standard practice in commercial matching engines.
+
+### Why REST + WebSocket?
+REST APIs (HTTP POST/DELETE) provide a simple, reliable protocol for order routing gates. WebSockets provide a low-overhead, persistent TCP connection to stream high-frequency market depth and trades without the round-trip latency of HTTP polling.
 
 ---
 
@@ -284,9 +331,12 @@ P50:         0.300 μs
 P99:         1.100 μs
 ```
 
+> [!NOTE]
+> Benchmark performed using 1,000,000 pre-generated in-memory orders executed in Release mode. Measurements include matching, risk validation, and bookkeeping overhead.
+
 ### Environment
-* **CPU**: AMD Ryzen 9 7900X (12 Cores, 24 Threads, 4.7 GHz base clock)
-* **RAM**: 32 GB DDR5 (5200 MHz)
+* **CPU**: *[Specify your CPU model here, e.g. Intel Core i7-12700H or AMD Ryzen]* (Benchmark was executed on a high-frequency Windows machine)
+* **RAM**: *[Specify your local RAM here, e.g. 16 GB DDR4]*
 * **Compiler**: Microsoft Visual Studio 2026 (MSVC 19.51)
 * **Build Flags**: `/O3` (Release Optimization), C++20 Standard
 * **OS**: Windows 11 Home (x64)
@@ -373,11 +423,11 @@ OrderBook/
 │   └── BenchmarkRunner.cpp
 ├── include/
 │   ├── Common.hpp
-│   ├── OrderBook.hpp
-│   ├── MatchingEngine.hpp
-│   ├── Statistics.hpp
-│   ├── RiskEngine.hpp
-│   ├── Portfolio.hpp
+│   ├── **OrderBook.hpp**
+│   ├── **MatchingEngine.hpp**
+│   ├── **Statistics.hpp**
+│   ├── **RiskEngine.hpp**
+│   ├── **Portfolio.hpp**
 │   ├── WebServer.hpp
 │   └── Logger.hpp
 ├── src/
@@ -394,6 +444,7 @@ OrderBook/
 │   └── CancelTests.cpp
 ├── docs/
 ├── assets/
+│   └── dashboard.png      # High-fidelity dashboard UI mockup
 ├── CMakeLists.txt
 └── README.md
 ```
