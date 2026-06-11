@@ -1,0 +1,49 @@
+# Build directories
+build/
+bin/
+out/
+dist/
+
+# Visual Studio files
+.vs/
+*.user
+*.suo
+*.sln
+*.vcxproj
+*.filters
+*.db
+*.opendb
+
+# VS Code files
+.vscode/
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+*.code-workspace
+
+# CLion / JetBrains files
+.idea/
+cmake-build-*/
+
+# Compiled files
+*.exe
+*.dll
+*.so
+*.dylib
+*.a
+*.lib
+*.pdb
+*.ilk
+*.exp
+
+# Dependency directories
+_deps/
+vcpkg_installed/
+
+# Logs and temporary files
+*.log
+*.tmp
+*.temp
+*~
+.DS_Store
