@@ -2,6 +2,7 @@
 #include "crow.h"
 #include "Logger.hpp"
 #include "nlohmann/json.hpp"
+#include "DashboardHTML.hpp"
 #include <set>
 #include <atomic>
 
@@ -113,6 +114,13 @@ void WebServer::setupEngineCallbacks() {
 }
 
 void WebServer::setupRoutes() {
+    // 0. Static Landing Page (Exchange Dashboard UI)
+    CROW_ROUTE(impl->app, "/")([]() {
+        crow::response res(DASHBOARD_HTML);
+        res.set_header("Content-Type", "text/html");
+        return res;
+    });
+
     // 1. WebSocket endpoint for market feed
     CROW_ROUTE(impl->app, "/market")
         .websocket(&impl->app)

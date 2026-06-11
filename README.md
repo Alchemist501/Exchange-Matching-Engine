@@ -28,6 +28,9 @@ Built with a focus on low-latency systems design and modern exchange infrastruct
 ### 🖥️ Exchange Dashboard Mockup
 ![Exchange Dashboard](assets/dashboard.png)
 
+### 🎥 Live Demonstration (WebSocket Stream)
+![Exchange Live Demo](assets/Recording%202026-06-11%20192522.gif)
+
 ---
 
 ## Overview
