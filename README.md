@@ -26,7 +26,7 @@ Built with a focus on low-latency systems design and modern exchange infrastruct
 ```
 
 ### 🖥️ Live Demonstration (WebSocket & Depth Feed)
-![Exchange Live Demo](assets/Demo_.gif)
+![Exchange Live Demo](assets/Demo__.gif)
 
 ---
 
